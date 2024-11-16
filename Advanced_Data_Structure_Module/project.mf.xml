@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <manifest>
-    <application name="DateTime">
-        <crown name="DateTime">
+    <application name="Advanced_Data_Structure_Module">
+        <crown name="Data_Structure">
             <desc>user script</desc>
         </crown>
-        <meta key="author">Dinhanh Dao</meta>
+        <meta key="author">Duc Huynh</meta>
         <meta key="version">1.0</meta>
         <meta key="priority">low</meta>
         <meta key="copy-protected">false</meta>
         <meta key="read-protected">false</meta>
-        <entry default="main.lua" path="scripts"/>
+        <entry default="Main.lua" path="scripts"/>
     </application>
 </manifest>
