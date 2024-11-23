@@ -9,7 +9,7 @@ local module = {
 ---@param cb function
 function module:forEach(cb)
     local currNode = self.head
-    local index = 0
+    local index = 1
     while currNode ~= nil do
         index = index + 1
         cb(currNode, index)
@@ -17,15 +17,36 @@ function module:forEach(cb)
     end
 end
 
+---@param index number
+---@return table|nil
+function module:searchByIndex(index)
+    local currNode = self.head
+    local count = 1
+
+    while currNode ~= nil do
+        if count == index then
+            return currNode
+        end
+
+        count = count + 1
+        currNode = currNode.next
+    end
+
+    return nil
+end
+
 ---@param data any
+---@return boolean
 function module:insertToHead(data)
     self.head = {
         data = data,
         next = self.head
     }
+    return true
 end
 
 ---@param data any
+---@return boolean
 function module:insertToLast(data)
     local currNode = self.head
     while currNode.next ~= nil do
@@ -37,10 +58,12 @@ function module:insertToLast(data)
         head = nil
     }
     currNode.next = newLastNode
+    return true
 end
 
 ---@param index number
 ---@param data any
+---@return boolean
 function module:insertByIndex(index, data)
     local newNode = {
         data = data,
@@ -54,15 +77,18 @@ function module:insertByIndex(index, data)
         if (count + 1) == index then
             newNode.next = currNode.next
             currNode.next = newNode
-            break
+            return true
         end
 
         currNode = currNode.next
     end
+
+    return false
 end
 
 ---@param index number
 ---@param data any
+---@return boolean
 function module:updateByIndex(index, data)
     local currNode = self.head
     local count = 0
@@ -71,15 +97,23 @@ function module:updateByIndex(index, data)
 
         if count == index then
             currNode.data = data
-            break
+            return true
         end
 
         currNode = currNode.next
     end
+
+    return false
+end
+
+---@param value any
+---@param data any
+function module:updateManyByValue(value, data)
 end
 
 ---@param index number
-function module:deleteByIndex(index)
+---@return boolean
+function module:removeByIndex(index)
     local currNode = self.head
     local count = 0
     while currNode.next ~= nil do
@@ -87,39 +121,50 @@ function module:deleteByIndex(index)
 
         if (count + 1) == index then
             currNode.next = currNode.next.next
-            break
+            return true
         end
 
         currNode = currNode.next
     end
+
+    return false
 end
 
----@param data any
-function module:deleteByValue(data)
-    local currNode = self.head
-
-    while currNode.next ~= nil do
-        if currNode.next.data == data then
-            currNode.next = currNode.next.next
-            break
-        end
-
-        currNode = currNode.next
-    end
-end
-
-function module:deleteFirst()
-    if self.head.next then
+---@return boolean
+function module:removeFirst()
+    if self.head.next ~= nil then
         self.head = self.head.next
+        return true
     end
+
+    return false
 end
 
-function module:deleteLast()
+---@return boolean
+function module:removeLast()
     local currNode = self.head
     while currNode.next.next ~= nil do
         currNode = currNode.next
     end
     currNode.next = nil
+
+    return true
+end
+
+---@param value any
+---@return boolean
+function module:removeManyByValue(value)
+    local currNode = self.head
+
+    while currNode ~= nil do
+        if currNode.next.data == value then
+            currNode = currNode.next.next
+        end
+
+        currNode = currNode.next
+    end
+
+    return true
 end
 
 ---@param data any
