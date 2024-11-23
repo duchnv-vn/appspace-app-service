@@ -13,6 +13,108 @@ local module = {
     daysInMonths = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
 }
 
+-- ********************** START CLASS FUNCTIONS **********************
+
+--- Calculate difference between two datetime objects
+---@param date1 table
+---@param date2 table
+function module.calcDifference(date1, date2)
+    local yearsDiff, monthsDiff, daysDiff = 0, 0, 0
+    local hoursDiff, minutesDiff, secondsDiff, miliSecondsDiff = 0, 0, 0, 0
+
+    local timestamp = date1:getTimestamp() - date2:getTimestamp()
+    local isPrevious = timestamp < 0
+    timestamp = math.abs(timestamp)
+
+    local baseYear = isPrevious and date1.year or date2.year
+    local dayTimestamp = 24 * 60 * 60 * 1000
+    while timestamp >= 365 * dayTimestamp do
+        local currentYearDays = module.isLeapYear(baseYear + yearsDiff) and 366 or 365
+        local yearTimestamp = currentYearDays * dayTimestamp
+        if timestamp >= yearTimestamp then
+            timestamp = timestamp - yearTimestamp
+            yearsDiff = yearsDiff + 1
+        else
+            break
+        end
+    end
+
+    local baseMonth = isPrevious and date1.month or date2.month
+    while timestamp >= 28 * dayTimestamp do
+        local currMonth = baseMonth + monthsDiff
+        if currMonth > 12 then
+            currMonth = currMonth - 12
+        end
+
+        local currentMonthDays = module.getDaysInMonth(baseYear + yearsDiff, currMonth)
+        local monthTimestamp = currentMonthDays * dayTimestamp
+        if timestamp >= monthTimestamp then
+            timestamp = timestamp - monthTimestamp
+            monthsDiff = monthsDiff + 1
+            if monthsDiff > 12 then
+                monthsDiff = monthsDiff - 12
+                yearsDiff = yearsDiff + 1
+            end
+        else
+            break
+        end
+    end
+
+    while timestamp >= dayTimestamp do
+        timestamp = timestamp - dayTimestamp
+        daysDiff = daysDiff + 1
+    end
+
+    local hourTimestamp = 60 * 60 * 1000
+    while timestamp >= hourTimestamp do
+        timestamp = timestamp - hourTimestamp
+        hoursDiff = hoursDiff + 1
+    end
+
+    local minuteTimestamp = 60 * 1000
+    while timestamp >= hourTimestamp do
+        timestamp = timestamp - minuteTimestamp
+        minutesDiff = minutesDiff + 1
+    end
+
+    while timestamp >= 1000 do
+        timestamp = timestamp - 1000
+        secondsDiff = secondsDiff + 1
+    end
+
+    miliSecondsDiff = timestamp
+
+    return {
+        yearsDiff = yearsDiff,
+        monthsDiff = monthsDiff,
+        daysDiff = daysDiff,
+        hoursDiff = hoursDiff,
+        minutesDiff = minutesDiff,
+        secondsDiff = secondsDiff,
+        miliSecondsDiff = miliSecondsDiff,
+        isPrevious = isPrevious
+    }
+end
+
+--- Check if year is leap year
+function module.isLeapYear(year)
+    return (year % 4 == 0 and year % 100 ~= 0) or (year % 400 == 0)
+end
+
+--- Get day number in a month
+--- @param year number
+--- @param month number
+function module.getDaysInMonth(year, month)
+    if month == 2 and module.isLeapYear(year) then
+        return 29
+    end
+    return module.daysInMonths[month]
+end
+
+-- ********************** END CLASS FUNCTIONS **********************
+
+-- ********************** START INSTANCE FUNCTIONS **********************
+
 --- Add time value to datetime object by unit
 ---@param value number
 ---@param unit 'year' | 'month' | 'date' | 'hour' | 'minute' | 'second' | 'millisecond'
@@ -148,6 +250,7 @@ function module:addByUnit(value, unit)
     end
 
     self:checkLeapYear()
+    self:getTimestamp(true)
     return self
 end
 
@@ -286,12 +389,13 @@ function module:subtractByUnit(value, unit)
     end
 
     self:checkLeapYear()
+    self:getTimestamp(true)
     return self
 end
 
 --- Check if year is leap year
 function module:checkLeapYear()
-    self.isLeapYear = self.year % 4 == 0 and (self.year % 100 ~= 0 or self.year % 400 == 0)
+    self.isLeapYear = module.isLeapYear(self.year)
     if self.isLeapYear then
         self.daysInMonths[2] = 29
     else
@@ -300,8 +404,9 @@ function module:checkLeapYear()
 end
 
 --- Get timestamp in milliseconds
-function module:getTimestamp()
-    if not self.timestamp then
+--- @param forceCreate? boolean
+function module:getTimestamp(forceCreate)
+    if forceCreate or not self.timestamp then
         local timestamp
 
         if self.year < 1970 then
@@ -398,37 +503,21 @@ function module:toISOString()
     return format
 end
 
---- Calculate difference between two datetime objects
----@param date1 table
----@param date2 table
-function module.calcDifference(date1, date2)
-    if not date1.timestamp then
-        date1:getTimestamp()
-    end
-    if not date2.timestamp then
-        date2:getTimestamp()
-    end
+--- Get date string representation of datetime object
+--- @param dateFormat string
+function module:toDateString(dateFormat)
+    local dateString = dateFormat
 
-    local millisecondsDiff = date1.timestamp - date2.timestamp
-    local secondsDiff = millisecondsDiff / 1000
-    local minutesDiff = secondsDiff / 60
-    local hoursDiff = minutesDiff / 60
-    local daysDiff = hoursDiff / 24
-    local weeksDiff = daysDiff / 7
-    local monthsDiff = daysDiff / 30
-    local yearsDiff = daysDiff / 365
+    dateString = dateString:gsub("YYYY", tostring(self.year))
+    dateString = dateString:gsub("YY", tostring(self.year):len() == 4 and string.sub(tostring(self.year), 3, 4) or
+        tostring(self.year))
+    dateString = dateString:gsub("MM", string.format("%02d", self.month))
+    dateString = dateString:gsub("DD", string.format("%02d", self.date))
 
-    return {
-        millisecondsDiff = millisecondsDiff,
-        secondsDiff = secondsDiff,
-        minutesDiff = minutesDiff,
-        hoursDiff = hoursDiff,
-        daysDiff = daysDiff,
-        weeksDiff = weeksDiff,
-        monthsDiff = monthsDiff,
-        yearsDiff = yearsDiff
-    }
+    return dateString
 end
+
+-- ********************** END INSTANCE FUNCTIONS **********************
 
 --- Create new UTC datetime object
 --- @param year? number
@@ -460,16 +549,7 @@ function module.new(year, month, date, hour, minute, second, millisecond)
     })
 
     if not year then
-        local currDate, currMonth, currYear, currHour, currMinute, currSecond, currMillisecond =
-            DateTime.getDateTimeValuesUTC()
-
-        year = currYear
-        month = currMonth
-        date = currDate
-        hour = currHour
-        minute = currMinute
-        second = currSecond
-        millisecond = currMillisecond
+        date, month, year, hour, minute, second, millisecond = DateTime.getDateTimeValuesUTC()
 
         instance.timestamp = DateTime.getUnixTimeMilliseconds()
         instance.dayInWeek = DateTime.calcDayOfWeek(DateTime.getUnixTime())
@@ -492,6 +572,7 @@ function module.new(year, month, date, hour, minute, second, millisecond)
     instance.millisecond = millisecond or 0
 
     instance:checkLeapYear()
+    instance:getTimestamp()
 
     if instance.date > instance.daysInMonths[instance.month] then
         instance.date = instance.daysInMonths[instance.month]
